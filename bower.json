@@ -1,0 +1,28 @@
+{
+  "name": "ng-offline-first",
+  "homepage": "https://github.com/snito/ng-offline-first",
+  "authors": [
+    "Shinsuke Ito <ito@unlog.co.jp>"
+  ],
+  "description": "library for offline-first angular apps",
+  "main": "",
+  "moduleType": [],
+  "keywords": [
+    "angular",
+    "offline",
+    "cache",
+    "storage"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "angular-local-storage": "~0.2.2",
+    "ng-backbone": "~0.1.1"
+  }
+}
