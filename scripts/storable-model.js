@@ -132,14 +132,7 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
       },
 
       localCollection: function () {
-
         var collection = this._syncMemoryCache();
-
-        collection.comparator = function (model) {
-          return -model.get('date').getTime();
-        };
-        collection.sort();
-
         return collection;
       },
 
