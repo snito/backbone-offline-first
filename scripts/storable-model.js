@@ -55,7 +55,9 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
        *
        *
        */
-      saveLocal: function () {
+      saveLocal: function (attributes) {
+
+        if (_.isObject(attributes)) this.set(attributes);
 
         var deferred = $q.defer();
 
@@ -70,8 +72,7 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
         var collection = this.constructor.localCollection();
         if (localId) {
           var equivalent = this.localFindEquivalent();
-          equivalent.attributes = this.attributes;
-
+          angular.extend(equivalent.attributes, this.attributes);
         } else {
           this.set('localId', Math.random());
           collection.add(this);
@@ -120,7 +121,7 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
           var parsedAttrs = _this.localParse(attrObj);
 
           if (model) {
-            model.attributes = parsedAttrs;
+            angular.extend(model.attributes, parsedAttrs);
           } else {
             model = new _this(parsedAttrs);
           }
