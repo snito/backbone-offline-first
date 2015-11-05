@@ -112,7 +112,7 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
         }
 
         var collection = this._memoryCollectionCache;
-        collection.length = 0;
+        collection.reset();
 
         _.each(attrObjs, function (attrObj) {
 
