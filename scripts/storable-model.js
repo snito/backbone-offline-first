@@ -37,7 +37,6 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
 
       next: function () {
         var index = this.localIndex();
-        console.log(index);
         if (index > 0) {
           var attributes = this.constructor.attributesList[index - 1];
           return this.constructor.createModelInsurance(attributes);
@@ -46,7 +45,9 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
 
       prev: function () {
         var index = this.localIndex();
-        if (index < this.constructor.attributesList - 1) {
+        var attributesList = this.constructor.attributesList;
+        if (index < attributesList.length - 1) {
+          var attributes = attributesList[index + 1];
           return this.constructor.createModelInsurance(attributes);
         }
       },
@@ -119,10 +120,7 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
       },
 
       localFind: function (localId) {
-        console.log('localId', localId, this.attributesList);
         var attributes = _.find(this.attributesList, function (attributes, i) {
-
-          console.log(i, attributes);
           return attributes.localId === localId;
         });
         return this.createModelInsurance(attributes);
