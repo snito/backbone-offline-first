@@ -74,6 +74,12 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
 
       },
 
+      destroyLocal: function () {
+        var index = this.localIndex();
+        this.constructor.attributesList.splice(index, 1);
+        this.constructor.write();
+      },
+
       attributesForLocal: function () {
         var obj = angular.extend({}, this.toJSON(), {
           objectId: this.id
