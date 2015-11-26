@@ -16,38 +16,38 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
       },
 
       localFindEquivalent: function () {
-        var localId = this.get('localId');
+        var equivalentAttributes = this.localFindRawEquivalent();
+        if (equivalentAttributes) {
+          return this.constructor.createModelInsurance(equivalentAttributes);
+        }
+      },
 
-        if (!localId) {
-          console.error('localId is not specified');
-          return this;
-        };
-
-        var equivalent = this.constructor.localFind(localId);
-        return equivalent;
+      localFindRawEquivalent: function () {
+        var _this = this;
+        var thisAttributes = this.attributes;
+        var attributesTobeSaved = _.find(this.constructor.attributesList, function (attributes, i) {
+          return (attributes.objectId && attributes.objectId == _this.id) || (attributes.localId && attributes.localId == thisAttributes.localId);
+        });
+        return attributesTobeSaved;
       },
 
       localIndex: function () {
-        var collection = this.constructor.localCollection();
-        var _this = this;
-        return _.findIndex(collection.models, function (model) {
-          return model.get('localId') == _this.get('localId');
-        });
+        return this.constructor.attributesList.indexOf(this.localFindRawEquivalent());
       },
 
       next: function () {
         var index = this.localIndex();
+        console.log(index);
         if (index > 0) {
-          var collection = this.constructor.localCollection();
-          return collection.at(index - 1);
+          var attributes = this.constructor.attributesList[index - 1];
+          return this.constructor.createModelInsurance(attributes);
         }
       },
 
       prev: function () {
         var index = this.localIndex();
-        var collection = this.constructor.localCollection();
-        if (index < collection.length - 1) {
-          return collection.at(index + 1);
+        if (index < this.constructor.attributesList - 1) {
+          return this.constructor.createModelInsurance(attributes);
         }
       },
 
@@ -56,35 +56,39 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
        *
        */
       saveLocal: function (attributes) {
-
         if (_.isObject(attributes)) this.set(attributes);
+        this._saveLocal();
+        return this.constructor.write();
+      },
 
-        var clone = this.clone();
+      _saveLocal: function () {
 
-        var deferred = $q.defer();
+        // var attributes = angular.copy(this.attributes);
 
-        var localConfig = this.constructor.localConfig;
-        var columns = localConfig.columns;
-        var columnNames = _.keys(columns);
+        var equivalent = this.localFindEquivalent();
 
-        var className = localConfig.name;
-        var localStorageKey = className;
-        var localId = this.get('localId');
+        if (equivalent) {
 
-        var collection = this.constructor.localCollection();
-        if (localId) {
-          var equivalent = this.localFindEquivalent();
-          angular.extend(equivalent.attributes, clone.attributes);
+          // TODO
+          // angular.extend(equivalent.attributes, attributes);
         } else {
-          this.set('localId', Math.random());
-          collection.add(this);
+          this.set('localId', Math.random().toString());
+          this.constructor.attributesList.push(this.attributesForLocal());
         }
 
-        localStorageService.set(localStorageKey, collection.toJSON());
+      },
 
-        deferred.resolve(this);
+      attributesForLocal: function () {
+        var obj = angular.extend({}, this.toJSON(), {
+          objectId: this.id
+        });
+        delete obj.ACL;
+        return obj;
 
-        return deferred.promise;
+      },
+
+      afterRetrieve: function () {
+
       },
 
     }, {
@@ -93,82 +97,132 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
         model: StorableModel
       }),
 
-      localFind: function (localId) {
-        return this.localCollection().find(function (model, i) {
-          return model.get('localId').toString() === localId.toString();
-        });
-      },
+      collectionFromAttributesList: function (attributesList) {
 
-      _syncMemoryCache: function () {
-        var className = this.localConfig.name;
-        var localStorageKey = className;
-        var attrObjs = localStorageService.get(localStorageKey);
-        var attrObjs = localStorageService.get(localStorageKey);
+        var _attributesList = attributesList || this.attributesList;
 
+        var collection = new this.Collection();
         var _this = this;
+        _.each(_attributesList, function (attributes, i) {
 
-        if (!this._memoryCollectionCache) {
-          this._memoryCollectionCache = new this.Collection();
-        }
-
-        var collection = this._memoryCollectionCache;
-        collection.reset();
-
-        _.each(attrObjs, function (attrObj) {
-
-          var model = collection.find(function (model) {
-            return model.id && model.id == attrObj.id || model.get('localId') && model.get('localId') == attrObj.localId;
-          });
-
-          var parsedAttrs = _this.localParse(attrObj);
-
-          if (model) {
-            angular.extend(model.attributes, parsedAttrs);
-          } else {
-            model = new _this(parsedAttrs);
-          }
-
+          var model = _this.createModelInsurance(angular.copy(attributes));
           collection.add(model);
         });
 
         return collection;
       },
 
-      localCollection: function () {
-        var collection = this._syncMemoryCache();
-        return collection;
+      syncToLocal: function () {
+        var deferred = $q.defer();
+        deferred.resolve();
+        return deferred.promise;
       },
 
-      localParse: function (obj) {
-        var keys = _.keys(obj);
+      localFind: function (localId) {
+        console.log('localId', localId, this.attributesList);
+        var attributes = _.find(this.attributesList, function (attributes, i) {
 
-        var _this = this;
-        for (var i = 0; i < keys.length; i++) {
-          var key = keys[i];
-          var attrNames = _.keys(_this.localConfig.columns);
-          var attrName = _.find(attrNames, function (column) {
-            return column === key;
-          });
+          console.log(i, attributes);
+          return attributes.localId === localId;
+        });
+        return this.createModelInsurance(attributes);
+      },
 
-          if (!attrName) continue;
+      localFindById: function (id) {
+        var attributes = _.find(this.attributesList, function (attributes, i) {
+          return attributes.objectId === id;
+        });
+        return this.createModelInsurance(attributes);
+      },
 
-          if (_this.localConfig.columns[attrName] === 'DATE') {
-            obj[attrName] = new Date(obj[attrName]);
-            break;
-          }
+      /**
+       * Save localCollection to localStorage
+       *
+       */
+      write: function () {
+        var deferred = $q.defer();
+
+        var localConfig = this.localConfig;
+        var className = localConfig.name;
+        var localStorageKey = className;
+
+        var newAttributesList = [];
+
+        _.each(this.attributesList, function (model, i) {
+          newAttributesList.push(model);
+        });
+        localStorageService.set(localStorageKey, newAttributesList);
+
+        deferred.resolve();
+        return deferred.promise;
+      },
+
+      /**
+       * Get localCollection from localStorage.
+       *
+       * @returns {Promise}
+       */
+      read: function () {
+        console.time('read');
+
+        var start = new Date().getTime();
+        var deferred = $q.defer();
+
+        var localConfig = this.localConfig;
+        var className = localConfig.name;
+        var localStorageKey = className;
+
+        var attributesList = this.attributesList = localStorageService.get(localStorageKey);
+
+        this.afterRead();
+        console.log('read:' + (new Date().getTime() - start));
+        console.timeEnd('read');
+
+        deferred.resolve(attributesList);
+
+        return deferred.promise;
+      },
+
+      afterRead: function () {
+
+      },
+
+      /**
+       * This method is called after retrieved from cached
+       *
+       * @returns {Object}
+       */
+      createModelInsurance: function (attributes) {
+        attributes = angular.copy(attributes) || {};
+        if (attributes.date) {
+          attributes.date = new Date(attributes.date);
         }
 
-        return obj;
-
+        var model = new this(attributes);
+        model.afterRetrieve();
+        return model;
       },
 
       localInit: function () {
+
         var localConfig = this.localConfig;
         var className = localConfig.name;
+
+        if (this.initialized) {
+          return;
+        }
 
         if (!localStorageService.get(className)) {
           localStorageService.set(className, []);
         }
+
+        if (!this.attributesList) {
+          this.attributesList = [];
+        }
+
+        this.initialized = true;
+
+        this.read();
       },
 
     });
