@@ -64,14 +64,9 @@ angular.module('ngStorable', ['LocalStorageModule', 'ngBackbone'])
 
       _saveLocal: function () {
 
-        // var attributes = angular.copy(this.attributes);
-
-        var equivalent = this.localFindEquivalent();
-
+        var equivalent = this.localFindRawEquivalent();
         if (equivalent) {
-
-          // TODO
-          // angular.extend(equivalent.attributes, attributes);
+          angular.extend(equivalent, this.attributes);
         } else {
           this.set('localId', Math.random().toString());
           this.constructor.attributesList.push(this.attributesForLocal());
